@@ -4,7 +4,7 @@
 #include <QFont>
 #include <QDebug>
 #include <QString>
-
+#include <QKeyEvent>
 
 void RegDecoder::cleanSelection()
 {
@@ -35,12 +35,34 @@ void RegDecoder::showToLineEditOut(uint displayingDecValue)
    ui->lineEditOutHex->setText("0x"+(QString::number(displayingDecValue, 16)).toUpper());
 }
 
+uint RegDecoder::setBit(uint value, uint bit)
+{
+   return value | (1 << bit);
+}
+
+uint RegDecoder::clearBit(uint value, uint bit)
+{
+    return value & ~(1 << bit);
+}
+
+void RegDecoder::keyPressEvent(QKeyEvent *event)
+{
+    if(( event->key() == Qt::Key_Return)||( event->key() == Qt::Key_Enter))
+    {
+       on_pushButton_clicked();
+    }
+    /*else
+    {
+       QDialog::keyPressEvent(event);
+    }  */
+}
+
 RegDecoder::RegDecoder(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::RegDecoder)
 {
    ui->setupUi(this);
-
+   on_pushButton_clicked();
 }
 
 RegDecoder::~RegDecoder()
@@ -73,7 +95,7 @@ void RegDecoder::on_pushButton_clicked()
    fontFail->setBold(true);
    //1. decode
    inputStr = inputStr.trimmed();
-   qDebug() << "buttonClicked: text is " << inputStr;
+   //qDebug() << "buttonClicked: text is " << inputStr;
    bool ok = false;
    uint  inputInt;
    if (inputStr.startsWith("0x")) // if hex
@@ -101,7 +123,7 @@ void RegDecoder::on_pushButton_clicked()
        qDebug() << "show error";
        ui->lineEdit->setPalette(*paletteFail);
        ui->lineEdit->setFont(*fontFail);
-       ui->labelInputCheckResult->setText("invalid input. \nNOTE: \"^0x[0-9A-Fa-f]+$\" for hex. \"^0b[0-1]+$\" for binary. \"^[0-9]+$\" for decimal.");
+       ui->labelInputCheckResult->setText("invalid input. Only Support 0~0xFFFFFFFF. \nNOTE: \"^0x[0-9A-Fa-f]+$\" for hex. \"^0b[0-1]+$\" for binary. \"^[0-9]+$\" for decimal.");
    }
    /****************** No need due to uint type ******************
    else if (inputInt>0xFFFFFFFF)
@@ -178,4 +200,22 @@ void RegDecoder::on_tableWidget_itemSelectionChanged()
        qDebug()  << ok << "on_tableWidget_itemSelectionChanged: use displayingDecValue ";
     }
 
+}
+
+void RegDecoder::on_tableWidget_doubleClicked(const QModelIndex &index)
+{
+    bool ok;
+    int indexColumn = index.column();
+    if( ui->tableWidget->item(0, indexColumn)->text().toUInt(&ok,10)==0)
+    {
+       ui->tableWidget->item(0, indexColumn)->setText("1");
+       this->displayingDecValue = setBit(this->displayingDecValue, (uint) (31-indexColumn));
+    }
+    else
+    {
+       ui->tableWidget->item(0, indexColumn)->setText("0");
+       this->displayingDecValue = clearBit(this->displayingDecValue, (uint) (31-indexColumn));
+    }
+    showToTableWidget();
+    cleanSelection();
 }
